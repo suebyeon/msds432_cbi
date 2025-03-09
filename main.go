@@ -50,8 +50,6 @@ type CCCVIRecords []struct {
 type CovidRecords []struct {
 	Zip_code         string `json:"zip_code"`
 	Week_number      string `json:"week_number"`
-	Week_start       string `json:"week_start"`
-	Week_end         string `json:"week_end"`
 	Tests            string `json:"tests_weekly"`
 	Percent_positive string `json:"percent_tested_positive_weekly"`
 }
@@ -594,13 +592,11 @@ func GetCovidDetails(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "covid" (
-		"id"   SERIAL ,	
-		"zip_code"   VARCHAR(255) ,
-		"week_number	INTEGER ,
-		"week_start"	TIMESTAMP WITHOUT TIME ZONE ,
-		"week_end"	TIMESTAMP WITHOUT TIME ZONE ,
+		"id" SERIAL ,	
+		"zip_code" VARCHAR(255) ,
+		"week_number INTEGER ,
 		"tests"	INTEGER ,
-		"percentage_positive"	FLOAT,
+		"percentage_positive" FLOAT,
 		PRIMARY KEY ("id")
 	);`
 
@@ -649,16 +645,6 @@ func GetCovidDetails(db *sql.DB) {
 			continue
 		}
 
-		week_start := covid_list[i].Week_start
-		if len(week_start) < 23 {
-			continue
-		}
-
-		week_end := covid_list[i].Week_end
-		if len(week_end) < 23 {
-			continue
-		}
-
 		tests_weekly, err := strconv.Atoi(covid_list[i].Tests)
 		if err != nil {
 			continue
@@ -669,14 +655,12 @@ func GetCovidDetails(db *sql.DB) {
 			continue
 		}
 
-		sql := `INSERT INTO covid ("zip_code", "week_number", "week_start" ,"week_end", "tests", "percentage_positive") values($1, $2, $3, $4, $5, $6)`
+		sql := `INSERT INTO covid ("zip_code" ,"week_end", "tests", "percentage_positive") values($1, $2, $3, $4)`
 
 		_, err = db.Exec(
 			sql,
 			zip_code,
 			week_number,
-			week_start,
-			week_end,
 			tests_weekly,
 			percent_tested_positive_weekly)
 
