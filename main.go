@@ -745,7 +745,7 @@ func GetCCVIDetails(db *sql.DB) {
 			continue
 		}
 
-		ccvi_category := ccvi_list[i].Community_area_name
+		ccvi_category := ccvi_list[i].Ccvi_category
 		if ccvi_category == "" {
 			continue
 		}
