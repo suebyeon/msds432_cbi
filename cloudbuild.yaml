@@ -1,5 +1,5 @@
 options:
-  logging: NONE
+  logging: CLOUD_LOGGING_ONLY
 
 steps:
 # Steps to pull a docker image for pgadmin, push it to container registry and deploy it to cloud run.
