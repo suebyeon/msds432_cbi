@@ -592,10 +592,10 @@ func GetCovidDetails(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "covid" (
-		"id" SERIAL ,	
-		"zip_code" VARCHAR(255) ,
-		"week_number INTEGER ,
-		"tests"	INTEGER ,
+		"id" SERIAL,	
+		"zip_code" VARCHAR(255),
+		"week_number INTEGER,
+		"tests"	INTEGER,
 		"percentage_positive" FLOAT,
 		PRIMARY KEY ("id")
 	);`
@@ -684,8 +684,8 @@ func GetCCVIDetails(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "ccvi" (
-		"community_area_or_zip"   INTEGER ,
-		"geography_type" VARCHAR(255) ,
+		"community_area_or_zip"   INTEGER,
+		"geography_type" VARCHAR(255),
 		"community_area_name" VARCHAR(255),
 		"ccvi_category" VARCHAR(255),
 		PRIMARY KEY ("community_area_or_zip")
