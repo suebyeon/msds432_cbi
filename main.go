@@ -655,7 +655,7 @@ func GetCovidDetails(db *sql.DB) {
 			continue
 		}
 
-		sql := `INSERT INTO covid ("zip_code" ,"week_end", "tests", "percentage_positive") values($1, $2, $3, $4)`
+		sql := `INSERT INTO covid ("zip_code" ,"week_number", "tests", "percentage_positive") values($1, $2, $3, $4)`
 
 		_, err = db.Exec(
 			sql,
