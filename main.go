@@ -264,13 +264,18 @@ func GetBoundaries(db *sql.DB) {
 
 	sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
 
-	_, err = db.Exec(
-		sql,
-		community_area,
-		zip_code)
+	for _, boundary := range boundaries {
+        	community_area := boundary.CommunityArea
+	        zip_code := boundary.ZipCode
 
-	if err != nil {
-		panic(err)
+		_, err = db.Exec(
+			sql,
+			community_area,
+			zip_code)
+
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	fmt.Println("Completed Inserting Rows into the boundaries Table")
