@@ -16,6 +16,10 @@ import (
 	"github.com/kelvins/geocoder"
 	_ "github.com/lib/pq"
 )
+type Boundaries []struct {
+	CommunityArea              int `json:"community_area"`
+	ZipCode      			   string `json:"zip_code"`
+}
 
 type TripsJsonRecords []struct {
 	Trip_id                    string `json:"trip_id"`
@@ -109,6 +113,7 @@ func main() {
 
 	log.Print("starting CBI Microservices ...")
 
+	go GetBoundaries(db)
 	go GetTrips(db)
 	go GetUnemploymentRates(db)
 	go GetBuildingPermits(db)
@@ -208,6 +213,68 @@ func req6handler(db *sql.DB) http.HandlerFunc {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
+
+func GetBoundaries(db *sql.DB) {
+	
+	fmt.Println("GetBoundaries: Collecting Boundaries Data")
+
+	drop_table := `drop table if exists boundaries`
+	_, err := db.Exec(drop_table)
+	if err != nil {
+		panic(err)
+	}
+
+	create_table := `CREATE TABLE IF NOT EXISTS "boundaries" (
+		"community_area" INTEGER,
+		"zip_code" VARCHAR(255),
+		PRIMARY KEY ("community_area")
+	);`
+
+	_, _err := db.Exec(create_table)
+	if _err != nil {
+		panic(_err)
+	}
+
+	fmt.Println("Created Table for Boundaries")
+
+	var url = "https://data.cityofchicago.org/resource/unjd-c2ca.json"
+
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    300 * time.Second,
+		DisableCompression: true,
+	}
+
+	client := &http.Client{Transport: tr}
+
+	res, err := client.Get(url)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Boundaries: Received data from SODA REST API for Boundaries")
+
+	body, _ := ioutil.ReadAll(res.Body)
+	var boundaries Boundaries
+	json.Unmarshal(body, &boundaries)
+
+	s := fmt.Sprintf("\n\n Boundaries number of SODA records received = %d\n\n", len(boundaries))
+	io.WriteString(os.Stdout, s)
+
+	sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
+
+	_, err = db.Exec(
+		sql,
+		community_area,
+		zip_code)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Completed Inserting Rows into the boundaries Table")
+}
 
 func GetTrips(db *sql.DB) {
 
@@ -798,26 +865,32 @@ func GetCCVIDetails(db *sql.DB) {
 
 }
 
-func req2(db *sql.DB) ([]UnemployNeighborhoodSummary, error) {
+func req2(db *sql.DB) ([]TripSummary, error) {
 	query := `
-		SELECT unemployment.community_area, unemployment.unemployment, unemployment.below_poverty_level
-		FROM unemployment
-		JOIN permit
-		ON unemployment.community_area = permit.community_area::TEXT
-		ORDER BY unemployment.unemployment DESC, unemployment.below_poverty_level DESC
-		LIMIT 5;
+		SELECT trips.dropoff_zip_code, trips.number_of_trips, covid.total_pos_cases
+		FROM (
+			SELECT zip_code, SUM(tests * percentage_positive) AS total_pos_cases
+			FROM covid
+			GROUP BY zip_code	
+			) as covid
+		JOIN (
+			SELECT dropoff_zip_code, COUNT(trip_id) AS number_of_trips
+			FROM transportation
+			WHERE pickup_zip_code = '60666' OR pickup_zip_code = '60638'
+			GROUP BY dropoff_zip_code
+			) as trips
+		ON covid.zip_code = trips.dropoff_zip_code;
 	`
-
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var summaries []UnemployNeighborhoodSummary
+	var summaries []TripSummary
 	for rows.Next() {
-		var summary UnemployNeighborhoodSummary
-		err := rows.Scan(&summary.CommunityArea, &summary.Unemployment, &summary.BelowPovertyLevel)
+		var summary TripSummary
+		err := rows.Scan(&summary.DropoffZipCode, &summary.NumberOfTrips, &summary.TotalPosCases)
 		if err != nil {
 			return nil, err
 		}
@@ -826,27 +899,26 @@ func req2(db *sql.DB) ([]UnemployNeighborhoodSummary, error) {
 	return summaries, nil
 }
 
-
 func req3(db *sql.DB) ([]CCVITripSummary, error) {
 	query := `
 		SELECT tb1.community_area_or_zip, tb1.number_of_trips_to, tb2.number_of_trips_from
-		FROM (
-			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_to
-			FROM ccvi
-			JOIN transportation 
-			ON ccvi.community_area_or_zip::TEXT = transportation.pickup_zip_code
-			WHERE ccvi.ccvi_category = 'HIGH'
-			GROUP BY ccvi.community_area_or_zip		
-		) as tb1
-		JOIN (
-			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_from
-			FROM ccvi
-			JOIN transportation 
-			ON ccvi.community_area_or_zip::TEXT = transportation.dropoff_zip_code
-			WHERE ccvi.ccvi_category = 'HIGH'
-			GROUP BY ccvi.community_area_or_zip
-		) as tb2
-		ON tb1.community_area_or_zip= tb2.community_area_or_zip;
+        FROM (
+            SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_to
+            FROM ccvi
+            JOIN transportation 
+            ON ccvi.community_area_or_zip::TEXT = transportation.pickup_zip_code
+            WHERE ccvi.ccvi_category = 'HIGH'
+            GROUP BY ccvi.community_area_or_zip		
+        ) as tb1
+        JOIN (
+            SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_from
+            FROM ccvi
+            JOIN transportation 
+            ON ccvi.community_area_or_zip::TEXT = transportation.dropoff_zip_code
+            WHERE ccvi.ccvi_category = 'HIGH'
+            GROUP BY ccvi.community_area_or_zip
+        ) as tb2
+        ON tb1.community_area_or_zip= tb2.community_area_or_zip;
 	`
 	rows, err := db.Query(query)
 	if err != nil {
