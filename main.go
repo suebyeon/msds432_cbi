@@ -68,6 +68,7 @@ type TripSummary struct {
 
 type CCVITripSummary struct {
 	NeighborhoodZipCode string `json:"neighborhood_zip_code"`
+	CommunityAreaName   string `json:"community_area_name"`
 	NumberOfTripsTo     int    `json:"number_of_trips_to"`
 	NumberOfTripsFrom   int    `json:"number_of_trips_from"`
 }
@@ -957,7 +958,7 @@ func req3(db *sql.DB) ([]CCVITripSummary, error) {
 	var summaries []CCVITripSummary
 	for rows.Next() {
 		var summary CCVITripSummary
-		err := rows.Scan(&summary.NeighborhoodZipCode, &summary.NumberOfTripsTo, &summary.NumberOfTripsFrom)
+		err := rows.Scan(&summary.NeighborhoodZipCode, &summary.CommunityAreaName, &summary.NumberOfTripsTo, &summary.NumberOfTripsFrom)
 		if err != nil {
 			return nil, err
 		}
