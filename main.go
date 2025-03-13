@@ -269,8 +269,6 @@ func GetBoundaries(db *sql.DB) {
         community_area := boundaries[i].CommunityArea
         zip_code := boundaries[i].ZipCode
 
-		fmt.Printf("Inserting record %d: community_area=%d, zip_code=%s\n", i, community_area, zip_code)
-
 		sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
 
 		_, err = db.Exec(
@@ -647,16 +645,36 @@ func GetBuildingPermits(db *sql.DB) {
 			continue
 		}
 
-		latitude_float, _ := strconv.ParseFloat(latitude, 64)
-		longitude_float, _ := strconv.ParseFloat(longitude, 64)
-		location := geocoder.Location{
-			Latitude:  latitude_float,
-			Longitude: longitude_float,
-		}
+		latitude_float, err := strconv.ParseFloat(latitude, 64)
+        if err != nil {
+            fmt.Printf("Error parsing latitude for record %d: %v\n", i, err)
+            continue
+        }
 
-		address_list, _ := geocoder.GeocodingReverse(location)
-		address := address_list[0]
-		zip_code := address.PostalCode
+        longitude_float, err := strconv.ParseFloat(longitude, 64)
+        if err != nil {
+            fmt.Printf("Error parsing longitude for record %d: %v\n", i, err)
+            continue
+        }
+
+        location := geocoder.Location{
+            Latitude:  latitude_float,
+            Longitude: longitude_float,
+        }
+
+        address_list, err := geocoder.GeocodingReverse(location)
+        if err != nil {
+            fmt.Printf("Error during geocoding for record %d: %v\n", i, err)
+            continue
+        }
+
+        if len(address_list) == 0 {
+            fmt.Printf("No address found for record %d\n", i)
+            continue
+        }
+
+        address := address_list[0]
+        zip_code := address.PostalCode
 
 		fmt.Printf("Inserting record %d: id=%s, permit_type=%s, community_area=%d, zip_code=%s\n", i, id, permit_type, community_area, zip_code)
 
