@@ -658,7 +658,7 @@ func GetBuildingPermits(db *sql.DB) {
 		address := address_list[0]
 		zip_code := address.PostalCode
 
-		mt.Printf("Inserting record %d: id=%s, permit_type=%s, community_area=%d, zip_code=%s\n", i, id, permit_type, community_area, zip_code)
+		fmt.Printf("Inserting record %d: id=%s, permit_type=%s, community_area=%d, zip_code=%s\n", i, id, permit_type, community_area, zip_code)
 
 		sql := `INSERT INTO permit ("id", "permit_type", "community_area", "zip_code") values($1, $2, $3, $4)`
 
