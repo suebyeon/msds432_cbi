@@ -18,7 +18,7 @@ import (
 )
 type Boundaries []struct {
 	CommunityArea              int `json:"community_area"`
-	ZipCode      			   string `json:"zip_code"`
+	ZipCode      			   string `json:"zip"`
 }
 
 type TripsJsonRecords []struct {
@@ -594,12 +594,6 @@ func GetUnemploymentRates(db *sql.DB) {
 func GetBuildingPermits(db *sql.DB) {
 	fmt.Println("GetBuildingPermits: Collecting Building Permits Data")
 
-	// This function is NOT complete
-	// It provides code-snippets for the data source: https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/data
-
-	// Data Collection needed from data source:
-	// https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/data
-
 	drop_table := `drop table if exists permit`
 	_, err := db.Exec(drop_table)
 	if err != nil {
@@ -607,10 +601,11 @@ func GetBuildingPermits(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "permit" (
+		"serial_id" SERIAL,
 		"id"   VARCHAR(255) ,
 		"permit_type" VARCHAR(255) ,
 		"community_area" INTEGER,
-		PRIMARY KEY ("id")
+		PRIMARY KEY ("serial_id")
 	);`
 
 	_, _err := db.Exec(create_table)
