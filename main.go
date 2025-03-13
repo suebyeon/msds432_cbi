@@ -800,19 +800,7 @@ func GetCCVIDetails(db *sql.DB) {
 
 func req2(db *sql.DB) ([]TripSummary, error) {
 	query := `
-		SELECT trips.dropoff_zip_code, trips.number_of_trips, covid.total_pos_cases
-		FROM (
-			SELECT zip_code, SUM("tests" * "percentage_positive") AS total_pos_cases
-			FROM covid
-			GROUP BY zip_code	
-			) as covid
-		JOIN (
-			SELECT dropoff_zip_code, COUNT(trip_id) AS number_of_trips
-			FROM transportation
-			WHERE pickup_zip_code = '60666' OR pickup_zip_code = '60638'
-			GROUP BY dropoff_zip_code
-			) as trips
-		ON covid.zip_code = trips.dropoff_zip_code;
+		SELECT * FROM transportation LIMIT 10;
 	`
 	rows, err := db.Query(query)
 	if err != nil {
