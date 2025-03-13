@@ -17,8 +17,8 @@ import (
 	_ "github.com/lib/pq"
 )
 type Boundaries []struct {
-	CommunityArea              int `json:"objectid"`
-	ZipCode      			   string `json:"zip"`
+	CommunityArea  string `json:"objectid"`
+	ZipCode    	   string `json:"zip"`
 }
 
 type TripsJsonRecords []struct {
@@ -228,7 +228,7 @@ func GetBoundaries(db *sql.DB) {
 
 	create_table := `CREATE TABLE IF NOT EXISTS "boundaries" (
 		"ID" SERIAL,
-		"community_area" INTEGER,
+		"community_area" VARCHAR(255),
 		"zip_code" VARCHAR(255),
 		PRIMARY KEY ("ID")
 	);`
@@ -596,8 +596,6 @@ func GetBuildingPermits(db *sql.DB) {
 
 	fmt.Println("Created Table for Building Permits")
 
-	// While doing unit-testing keep the limit value to 500
-	// later you could change it to 1000, 2000, 10,000, etc.
 	var url = "https://data.cityofchicago.org/resource/building-permits.json?$limit=500"
 
 	tr := &http.Transport{
@@ -623,11 +621,6 @@ func GetBuildingPermits(db *sql.DB) {
 	io.WriteString(os.Stdout, s)
 
 	for i := 0; i < len(building_data_list); i++ {
-
-		// We will execute defensive coding to check for messy/dirty/missing data values
-		// There are different methods to deal with messy/dirty/missing data.
-		// We will use the simplest method: drop records that have messy/dirty/missing data
-		// Any record that has messy/dirty/missing data we don't enter it in the data lake/table
 
 		id := building_data_list[i].ID
 		if id == "" {
@@ -664,6 +657,8 @@ func GetBuildingPermits(db *sql.DB) {
 		address_list, _ := geocoder.GeocodingReverse(location)
 		address := address_list[0]
 		zip_code := address.PostalCode
+
+		mt.Printf("Inserting record %d: id=%s, permit_type=%s, community_area=%d, zip_code=%s\n", i, id, permit_type, community_area, zip_code)
 
 		sql := `INSERT INTO permit ("id", "permit_type", "community_area", "zip_code") values($1, $2, $3, $4)`
 
