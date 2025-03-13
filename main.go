@@ -607,7 +607,7 @@ func GetBuildingPermits(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "permit" (
-		"serial_id" SERIAL
+		"serial_id" SERIAL,
 		"id"   VARCHAR(255) ,
 		"permit_type" VARCHAR(255) ,
 		"community_area" INTEGER,
