@@ -107,41 +107,38 @@ func main() {
 
 	geocoder.ApiKey = apiKey
 
-	for {
+	log.Print("starting CBI Microservices ...")
 
-		log.Print("starting CBI Microservices ...")
+	go GetTrips(db)
+	go GetUnemploymentRates(db)
+	go GetBuildingPermits(db)
+	go GetCovidDetails(db)
+	go GetCCVIDetails(db)
 
-		go GetTrips(db)
-		go GetUnemploymentRates(db)
-		go GetBuildingPermits(db)
-		go GetCovidDetails(db)
-		go GetCCVIDetails(db)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler)
+	mux.Handle("/req2", req2handler(db))
+	mux.Handle("/req3", req3handler(db))
+	mux.Handle("/req5", req5handler(db))
+	mux.Handle("/req6", req6handler(db))
 
-		mux := http.NewServeMux()
-		mux.HandleFunc("/", handler)
-		mux.Handle("/req2", req2handler(db))
-		mux.Handle("/req3", req3handler(db))
-		mux.Handle("/req5", req5handler(db))
-		mux.Handle("/req6", req6handler(db))
-
-		// Determine port for HTTP service.
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-			log.Printf("defaulting to port %s", port)
-		}
-
-		// Start HTTP server.
-		log.Printf("listening on port %s", port)
-		log.Print("Navigate to Cloud Run services and find the URL of your service")
-		log.Print("Use the browser and navigate to your service URL to to check your service has started")
-
-		if err := http.ListenAndServe(":"+port, mux); err != nil {
-			log.Fatal(err)
-		}
-
-		time.Sleep(24 * time.Hour)
+	// Determine port for HTTP service.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("defaulting to port %s", port)
 	}
+
+	// Start HTTP server.
+	log.Printf("listening on port %s", port)
+	log.Print("Navigate to Cloud Run services and find the URL of your service")
+	log.Print("Use the browser and navigate to your service URL to to check your service has started")
+
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatal(err)
+	}
+
+	time.Sleep(24 * time.Hour)
 
 }
 
@@ -164,6 +161,7 @@ func req2handler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		summaries, err := req2(db)
 		if err != nil {
+			log.Printf("req2 error: %v", err)
 			http.Error(w, "Failed to retrieve req2 data", http.StatusInternalServerError)
 			return
 		}
@@ -810,7 +808,7 @@ func req2(db *sql.DB) ([]TripSummary, error) {
 			) as covid
 		JOIN (
 			SELECT dropoff_zip_code, COUNT(trip_id) AS number_of_trips
-			FROM trips
+			FROM transportation
 			WHERE pickup_zip_code = '60666' OR pickup_zip_code = '60638'
 			GROUP BY dropoff_zip_code
 			) as trips
@@ -841,7 +839,7 @@ func req3(db *sql.DB) ([]CCVITripSummary, error) {
 			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_to
 			FROM ccvi
 			JOIN transportation 
-			ON ccvi.community_area_or_zip = transportation.pickup_zip_code
+			ON ccvi.community_area_or_zip::TEXT = transportation.pickup_zip_code
 			WHERE ccvi.ccvi_category = 'HIGH'
 			GROUP BY ccvi.community_area_or_zip		
 		) as tb1
@@ -849,7 +847,7 @@ func req3(db *sql.DB) ([]CCVITripSummary, error) {
 			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_from
 			FROM ccvi
 			JOIN transportation 
-			ON ccvi.community_area_or_zip = transportation.dropoff_zip_code
+			ON ccvi.community_area_or_zip::TEXT = transportation.dropoff_zip_code
 			WHERE ccvi.ccvi_category = 'HIGH'
 			GROUP BY ccvi.community_area_or_zip
 		) as tb2
@@ -878,7 +876,7 @@ func req5(db *sql.DB) ([]UnemployNeighborhoodSummary, error) {
 		SELECT unemployment.community_area, unemployment.unemployment, unemployment.below_poverty_level
 		FROM unemployment
 		JOIN permit
-		ON unmeployment.community_area = permit.community_area
+		ON unemployment.community_area = permit.community_area::TEXT
 		ORDER BY unemployment.unemployment DESC, unemployment.below_poverty_level DESC
 		LIMIT 5;
 	`
@@ -909,7 +907,7 @@ func req6(db *sql.DB) ([]LoanNeighborhoodSummary, error) {
             unemployment.per_capita_income
         FROM unemployment
         JOIN permit
-        ON unemployment.community_area = permit.community_area
+        ON unemployment.community_area = permit.community_area::TEXT
         WHERE permit.permit_type = 'PERMIT - NEW CONSTRUCTION' AND unemployment.per_capita_income < 30000
         GROUP BY unemployment.community_area, unemployment.per_capita_income
         ORDER BY permit_count ASC
