@@ -54,33 +54,39 @@ type CovidRecords []struct {
 	Percent_positive string `json:"percent_tested_positive_weekly"`
 }
 
+type TripSummary struct {
+	DropoffZipCode string `json:"dropoff_zip_code"`
+	NumberOfTrips  int    `json:"number_of_trips"`
+	TotalPosCases  int    `json:"total_pos_cases"`
+}
+
+type CCVITripSummary struct {
+	NeighborhoodZipCode string `json:"neighborhood_zip_code"`
+	NumberOfTripsTo     int    `json:"number_of_trips_to"`
+	NumberOfTripsFrom   int    `json:"number_of_trips_from"`
+}
+
+type UnemployNeighborhoodSummary struct {
+	CommunityArea     string  `json:"community_area"`
+	Unemployment      float64 `json:"unemployment"`
+	BelowPovertyLevel float64 `json:"below_poverty_level"`
+}
+
+type LoanNeighborhoodSummary struct {
+	CommunityArea   string `json:"community_area"`
+	PermitCount     int    `json:"permit_count"`
+	PerCapitaIncome int    `json:"per_capita_income"`
+}
+
 const apiKey = "AIzaSyC0c7zFxovSnma6BhX60prrCaAjtmFCE1w"
 
 // Declare my database connection
 var db *sql.DB
 
-// The main package can has the init function.
-// The init function will be triggered before the main function
-
 func init() {
 	var err error
 
 	fmt.Println("Initializing the DB connection")
-
-	// Establish connection to Postgres Database
-
-	// OPTION 1 - Postgress application running on localhost
-	//db_connection := "user=postgres dbname=chicago_business_intelligence password=root host=localhost sslmode=disable port = 5432"
-
-	// OPTION 2
-	// Docker container for the Postgres microservice - uncomment when deploy with host.docker.internal
-	//db_connection := "user=postgres dbname=chicago_business_intelligence password=root host=host.docker.internal sslmode=disable port = 5433"
-
-	// OPTION 3
-	// Docker container for the Postgress microservice - uncomment when deploy with IP address of the container
-	// To find your Postgres container IP, use the command with your network name listed in the docker compose file as follows:
-	// docker network inspect cbi_backend
-	//db_connection := "user=postgres dbname=chicago_business_intelligence password=root host=162.123.0.9 sslmode=disable port = 5433"
 
 	//Option 4
 	//Database application running on Google Cloud Platform.
@@ -92,13 +98,6 @@ func init() {
 		panic(err)
 	}
 
-	// Test the database connection
-	//err = db.Ping()
-	//if err != nil {
-	//	fmt.Println("Couldn't Connect to database")
-	//	panic(err)
-	//}
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -108,34 +107,9 @@ func main() {
 
 	geocoder.ApiKey = apiKey
 
-	// Spin in a loop and pull data from the city of chicago data portal
-	// Once every hour, day, week, etc.
-	// Though, please note that Not all datasets need to be pulled on daily basis
-	// fine-tune the following code-snippet as you see necessary
-
-	// For now while you are doing protyping and unit-testing,
-	// it is a good idea to use Cloud Run and start an HTTP server, and manually you kick-start
-	// the microservices (goroutines) for data collection from the different sources
-	// Once you are done with protyping and unit-testing,
-	// you could port your code Cloud Run to  Compute Engine, App Engine, Kubernetes Engine, Google Functions, etc.
-
 	for {
 
-		// While using Cloud Run for instrumenting/prototyping/debugging use the server
-		// to trace the state of you running data collection services
-		// Navigate to Cloud Run services and find the URL of your service
-		// An example of your services URL: https://go-microservice-23zzuv4hksp-uc.a.run.app
-		// Use the browser and navigate to your service URL to to kick-start your service
-
 		log.Print("starting CBI Microservices ...")
-
-		// Pull the data once a day
-		// You might need to pull Taxi Trips and COVID data on daily basis
-		// but not the unemployment dataset becasue its dataset doesn't change every day
-		// This code snippet is only for prototypying and unit-testing
-
-		// build and fine-tune the functions to pull data from the different data sources
-		// The following code snippets show you how to pull data from different data sources
 
 		go GetTrips(db)
 		go GetUnemploymentRates(db)
@@ -144,6 +118,12 @@ func main() {
 		go GetCCVIDetails(db)
 
 		http.HandleFunc("/", handler)
+
+		mux := http.NewServeMux()
+		mux.Handle("/req2", req2handler(db))
+		mux.Handle("/req3", req3handler(db))
+		mux.Handle("/req5", req5handler(db))
+		mux.Handle("/req6", req6handler(db))
 
 		// Determine port for HTTP service.
 		port := os.Getenv("PORT")
@@ -176,6 +156,57 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "CBI data collection microservices' goroutines have started for %s!\n", name)
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+
+func req2handler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		summaries, err := req2(db)
+		if err != nil {
+			http.Error(w, "Failed to retrieve req2 data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(summaries)
+	}
+}
+
+func req3handler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		summaries, err := req3(db)
+		if err != nil {
+			http.Error(w, "Failed to retrieve req3 data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(summaries)
+	}
+}
+
+func req5handler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		summaries, err := req5(db)
+		if err != nil {
+			http.Error(w, "Failed to retrieve req5 data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(summaries)
+	}
+}
+
+func req6handler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		summaries, err := req6(db)
+		if err != nil {
+			http.Error(w, "Failed to retrieve req6 data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(summaries)
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -690,6 +721,7 @@ func GetCCVIDetails(db *sql.DB) {
 		"ccvi_category" VARCHAR(255),
 		PRIMARY KEY ("community_area_or_zip")
 	);`
+
 	_, _err := db.Exec(create_table)
 	if _err != nil {
 		panic(_err)
@@ -767,4 +799,138 @@ func GetCCVIDetails(db *sql.DB) {
 
 	fmt.Println("Completed Inserting Rows into the CCVI Table")
 
+}
+
+func req2(db *sql.DB) ([]TripSummary, error) {
+	query := `
+		SELECT trips.dropoff_zip_code, trips.number_of_trips, covid.total_pos_cases
+		FROM (
+			SELECT zip_code, SUM("tests" * "percentage_positive") AS total_pos_cases
+			FROM covid
+			GROUP BY zip_code	
+			) as covid
+		JOIN (
+			SELECT dropoff_zip_code, COUNT(trip_id) AS number_of_trips
+			FROM trips
+			WHERE pickup_zip_code = '60666' OR pickup_zip_code = '60638'
+			GROUP BY dropoff_zip_code
+			) as trips
+		ON covid.zip_code = trips.dropoff_zip_code;
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []TripSummary
+	for rows.Next() {
+		var summary TripSummary
+		err := rows.Scan(&summary.DropoffZipCode, &summary.NumberOfTrips, &summary.TotalPosCases)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
+}
+
+func req3(db *sql.DB) ([]CCVITripSummary, error) {
+	query := `
+		SELECT tb1.community_area_or_zip, tb1.number_of_trips_to, tb2.number_of_trips_from
+		FROM (
+			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_to
+			FROM ccvi
+			JOIN transportation 
+			ON ccvi.community_area_or_zip = transportation.pickup_zip_code
+			WHERE ccvi.ccvi_category = 'HIGH'
+			GROUP BY ccvi.community_area_or_zip		
+		) as tb1
+		JOIN (
+			SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_from
+			FROM ccvi
+			JOIN transportation 
+			ON ccvi.community_area_or_zip = transportation.dropoff_zip_code
+			WHERE ccvi.ccvi_category = 'HIGH'
+			GROUP BY ccvi.community_area_or_zip
+		) as tb2
+		ON tb1.community_area_or_zip= tb2.community_area_or_zip;
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []CCVITripSummary
+	for rows.Next() {
+		var summary CCVITripSummary
+		err := rows.Scan(&summary.NeighborhoodZipCode, &summary.NumberOfTripsTo, &summary.NumberOfTripsFrom)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
+}
+
+func req5(db *sql.DB) ([]UnemployNeighborhoodSummary, error) {
+	query := `
+		SELECT unemployment.community_area, unemployment.unemployment, unemployment.below_poverty_level
+		FROM unemployment
+		JOIN permit
+		ON unmeployment.community_area = permit.community_area
+		ORDER BY unemployment.unemployment DESC, unemployment.below_poverty_level DESC
+		LIMIT 5;
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []UnemployNeighborhoodSummary
+	for rows.Next() {
+		var summary UnemployNeighborhoodSummary
+		err := rows.Scan(&summary.CommunityArea, &summary.Unemployment, &summary.BelowPovertyLevel)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
+}
+
+func req6(db *sql.DB) ([]LoanNeighborhoodSummary, error) {
+	query := `
+        SELECT
+            unemployment.community_area,
+            COUNT(permit.id) AS permit_count,
+            unemployment.per_capita_income
+        FROM unemployment
+        JOIN permit
+        ON unemployment.community_area = permit.community_area
+        WHERE permit.permit_type = 'PERMIT - NEW CONSTRUCTION' AND unemployment.per_capita_income < 30000
+        GROUP BY unemployment.community_area, unemployment.per_capita_income
+        ORDER BY permit_count ASC
+        LIMIT 5;
+    `
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []LoanNeighborhoodSummary
+	for rows.Next() {
+		var summary LoanNeighborhoodSummary
+		err := rows.Scan(&summary.CommunityArea, &summary.PermitCount, &summary.PerCapitaIncome)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
 }
