@@ -17,8 +17,8 @@ import (
 	_ "github.com/lib/pq"
 )
 type Boundaries []struct {
-	CommunityArea              int `json:"community_area"`
-	ZipCode      			   string `json:"zip"`
+	CommunityArea              int `json:"objectid"`
+	ZipCode      		   string `json:"zip"`
 }
 
 type TripsJsonRecords []struct {
