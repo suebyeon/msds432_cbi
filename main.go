@@ -59,9 +59,9 @@ type CovidRecords []struct {
 }
 
 type TripSummary struct {
-	DropoffZipCode string `json:"dropoff_zip_code"`
-	NumberOfTrips  int    `json:"number_of_trips"`
-	TotalPosCases  int    `json:"total_pos_cases"`
+	DropoffZipCode string  `json:"dropoff_zip_code"`
+	NumberOfTrips  int     `json:"number_of_trips"`
+	TotalPosCases  float64 `json:"total_pos_cases"`
 }
 
 type CCVITripSummary struct {
@@ -266,6 +266,8 @@ func GetBoundaries(db *sql.DB) {
 	for i := 0; i < len(boundaries); i++ { 
         community_area := boundaries[i].CommunityArea
         zip_code := boundaries[i].ZipCode
+
+		fmt.Printf("Inserting record %d: community_area=%d, zip_code=%s\n", i, community_area, zip_code)
 
 		sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
 
@@ -605,10 +607,11 @@ func GetBuildingPermits(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "permit" (
+		"serial_id" SERIAL
 		"id"   VARCHAR(255) ,
 		"permit_type" VARCHAR(255) ,
 		"community_area" INTEGER,
-		PRIMARY KEY ("id")
+		PRIMARY KEY ("serial_id")
 	);`
 
 	_, _err := db.Exec(create_table)
