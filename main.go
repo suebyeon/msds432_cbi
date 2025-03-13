@@ -263,7 +263,7 @@ func GetBoundaries(db *sql.DB) {
 	s := fmt.Sprintf("\n\n Boundaries number of SODA records received = %d\n\n", len(boundaries))
 	io.WriteString(os.Stdout, s)
 
-	for i := 0; i < len(boundaries); i++ { {
+	for i := 0; i < len(boundaries); i++ { 
         community_area := boundaries[i].CommunityArea
         zip_code := boundaries[i].ZipCode
 
