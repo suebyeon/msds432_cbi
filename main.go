@@ -225,9 +225,10 @@ func GetBoundaries(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "boundaries" (
+		"ID" SERIAL,
 		"community_area" INTEGER,
 		"zip_code" VARCHAR(255),
-		PRIMARY KEY ("community_area")
+		PRIMARY KEY ("ID")
 	);`
 
 	_, _err := db.Exec(create_table)
@@ -265,8 +266,8 @@ func GetBoundaries(db *sql.DB) {
 	sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
 
 	for _, boundary := range boundaries {
-        	community_area := boundary.CommunityArea
-	        zip_code := boundary.ZipCode
+        community_area := boundary.CommunityArea
+        zip_code := boundary.ZipCode
 
 		_, err = db.Exec(
 			sql,
@@ -784,11 +785,12 @@ func GetCCVIDetails(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "ccvi" (
+		"ID" SERIAL
 		"community_area_or_zip" INTEGER,
 		"geography_type" VARCHAR(255),
 		"community_area_name" VARCHAR(255),
 		"ccvi_category" VARCHAR(255),
-		PRIMARY KEY ("community_area_or_zip")
+		PRIMARY KEY ("ID")
 	);`
 
 	_, _err := db.Exec(create_table)
