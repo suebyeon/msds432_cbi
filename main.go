@@ -117,9 +117,8 @@ func main() {
 		go GetCovidDetails(db)
 		go GetCCVIDetails(db)
 
-		http.HandleFunc("/", handler)
-
 		mux := http.NewServeMux()
+		mux.HandleFunc("/", handler)
 		mux.Handle("/req2", req2handler(db))
 		mux.Handle("/req3", req3handler(db))
 		mux.Handle("/req5", req5handler(db))
@@ -137,7 +136,7 @@ func main() {
 		log.Print("Navigate to Cloud Run services and find the URL of your service")
 		log.Print("Use the browser and navigate to your service URL to to check your service has started")
 
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
+		if err := http.ListenAndServe(":"+port, mux); err != nil {
 			log.Fatal(err)
 		}
 
