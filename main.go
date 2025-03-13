@@ -798,32 +798,26 @@ func GetCCVIDetails(db *sql.DB) {
 
 }
 
-func req2(db *sql.DB) ([]TripSummary, error) {
+func req2(db *sql.DB) ([]UnemployNeighborhoodSummary, error) {
 	query := `
-		SELECT trips.dropoff_zip_code, trips.number_of_trips, covid.total_pos_cases
-		FROM (
-			SELECT zip_code, SUM(tests * percentage_positive) AS total_pos_cases
-			FROM covid
-			GROUP BY zip_code	
-			) as covid
-		JOIN (
-			SELECT dropoff_zip_code, COUNT(trip_id) AS number_of_trips
-			FROM transportation
-			WHERE pickup_zip_code = '60666' OR pickup_zip_code = '60638'
-			GROUP BY dropoff_zip_code
-			) as trips
-		ON covid.zip_code = trips.dropoff_zip_code;
+		SELECT unemployment.community_area, unemployment.unemployment, unemployment.below_poverty_level
+		FROM unemployment
+		JOIN permit
+		ON unemployment.community_area = permit.community_area::TEXT
+		ORDER BY unemployment.unemployment DESC, unemployment.below_poverty_level DESC
+		LIMIT 5;
 	`
+
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var summaries []TripSummary
+	var summaries []UnemployNeighborhoodSummary
 	for rows.Next() {
-		var summary TripSummary
-		err := rows.Scan(&summary.DropoffZipCode, &summary.NumberOfTrips, &summary.TotalPosCases)
+		var summary UnemployNeighborhoodSummary
+		err := rows.Scan(&summary.CommunityArea, &summary.Unemployment, &summary.BelowPovertyLevel)
 		if err != nil {
 			return nil, err
 		}
@@ -831,6 +825,7 @@ func req2(db *sql.DB) ([]TripSummary, error) {
 	}
 	return summaries, nil
 }
+
 
 func req3(db *sql.DB) ([]CCVITripSummary, error) {
 	query := `
