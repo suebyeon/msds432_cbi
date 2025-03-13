@@ -18,7 +18,7 @@ import (
 )
 type Boundaries []struct {
 	CommunityArea              int `json:"objectid"`
-	ZipCode      		   string `json:"zip"`
+	ZipCode      			   string `json:"zip"`
 }
 
 type TripsJsonRecords []struct {
@@ -42,6 +42,8 @@ type PermitRecords []struct {
 	ID             string `json:"id"`
 	Permit_type    string `json:"permit_type"`
 	Community_area string `json:"community_area"`
+	Latitude	   string `json:"latitude"`
+	Longitude	   string `json:"longitude"`
 }
 
 type CCCVIRecords []struct {
@@ -288,9 +290,6 @@ func GetTrips(db *sql.DB) {
 
 	fmt.Println("GetTaxiTrips: Collecting Taxi Trips Data")
 
-	// Get your geocoder.ApiKey from here :
-	// https://developers.google.com/maps/documentation/geocoding/get-api-key?authuser=2
-
 	drop_table := `drop table if exists transportation`
 	_, err := db.Exec(drop_table)
 	if err != nil {
@@ -317,11 +316,6 @@ func GetTrips(db *sql.DB) {
 	}
 
 	fmt.Println("Created Table for Taxi Trips")
-
-	// While doing unit-testing keep the limit value to 500
-	// later you could change it to 1000, 2000, 10,000, etc.
-
-	// Get the the Taxi Trips for Taxi medallions list
 
 	var url = "https://data.cityofchicago.org/resource/wrvz-psew.json?$limit=500"
 
@@ -378,18 +372,10 @@ func GetTrips(db *sql.DB) {
 
 	for i := 0; i < len(taxi_trips_list); i++ {
 
-		// We will execute defensive coding to check for messy/dirty/missing data values
-		// There are different methods to deal with messy/dirty/missing data.
-		// We will use the simplest method: drop records that have messy/dirty/missing data
-		// Any record that has messy/dirty/missing data we don't enter it in the data lake/table
-
 		trip_id := taxi_trips_list[i].Trip_id
 		if trip_id == "" {
 			continue
 		}
-
-		// if trip start/end timestamp doesn't have the length of 23 chars in the format "0000-00-00T00:00:00.000"
-		// skip this record
 
 		// get Trip_start_timestamp
 		trip_start_timestamp := taxi_trips_list[i].Trip_start_timestamp
@@ -483,9 +469,6 @@ func GetTrips(db *sql.DB) {
 	fmt.Println("Completed Inserting Rows into the TaxiTrips Table")
 
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func GetUnemploymentRates(db *sql.DB) {
 	fmt.Println("GetCommunityAreaUnemployment: Collecting Unemployment Rates Data")
@@ -588,9 +571,6 @@ func GetUnemploymentRates(db *sql.DB) {
 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-
 func GetBuildingPermits(db *sql.DB) {
 	fmt.Println("GetBuildingPermits: Collecting Building Permits Data")
 
@@ -605,6 +585,7 @@ func GetBuildingPermits(db *sql.DB) {
 		"id"   VARCHAR(255) ,
 		"permit_type" VARCHAR(255) ,
 		"community_area" INTEGER,
+		"zip_code" VARCHAR(255),
 		PRIMARY KEY ("serial_id")
 	);`
 
@@ -663,13 +644,35 @@ func GetBuildingPermits(db *sql.DB) {
 			continue
 		}
 
-		sql := `INSERT INTO permit ("id", "permit_type", "community_area") values($1, $2, $3)`
+		latitude := building_data_list[i].Latitude
+		if latitude == "" {
+			continue
+		}
+
+		longitude := building_data_list[i].Longitude
+		if longitude == "" {
+			continue
+		}
+
+		latitude_float, _ := strconv.ParseFloat(latitude, 64)
+		longitude_float, _ := strconv.ParseFloat(longitude, 64)
+		location := geocoder.Location{
+			Latitude:  latitude_float,
+			Longitude: longitude_float,
+		}
+
+		address_list, _ := geocoder.GeocodingReverse(location)
+		address := address_list[0]
+		zip_code := address.PostalCode
+
+		sql := `INSERT INTO permit ("id", "permit_type", "community_area", "zip_code") values($1, $2, $3, $4)`
 
 		_, err = db.Exec(
 			sql,
 			id,
 			permit_type,
-			community_area)
+			community_area,
+			zip_code)
 
 		if err != nil {
 			panic(err)
