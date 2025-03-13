@@ -619,6 +619,7 @@ func GetBuildingPermits(db *sql.DB) {
 	io.WriteString(os.Stdout, s)
 
 	for i := 0; i < len(building_data_list); i++ {
+		fmt.Println("Permit is parsing")
 
 		id := building_data_list[i].ID
 		if id == "" {
