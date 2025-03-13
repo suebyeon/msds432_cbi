@@ -619,7 +619,6 @@ func GetBuildingPermits(db *sql.DB) {
 	io.WriteString(os.Stdout, s)
 
 	for i := 0; i < len(building_data_list); i++ {
-		fmt.Println("Permit is parsing")
 
 		id := building_data_list[i].ID
 		if id == "" {
@@ -676,8 +675,6 @@ func GetBuildingPermits(db *sql.DB) {
 
         address := address_list[0]
         zip_code := address.PostalCode
-
-		fmt.Printf("Inserting record %d: id=%s, permit_type=%s, community_area=%d, zip_code=%s\n", i, id, permit_type, community_area, zip_code)
 
 		sql := `INSERT INTO permit ("id", "permit_type", "community_area", "zip_code") values($1, $2, $3, $4)`
 
@@ -922,22 +919,32 @@ func req2(db *sql.DB) ([]TripSummary, error) {
 
 func req3(db *sql.DB) ([]CCVITripSummary, error) {
 	query := `
-		SELECT tb1.community_area_or_zip, tb1.number_of_trips_to, tb2.number_of_trips_from
+		SELECT tb1.community_area_or_zip, tb1.community_area_name, tb1.number_of_trips_to, tb2.number_of_trips_from
         FROM (
-            SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_to
-            FROM ccvi
-            JOIN transportation 
-            ON ccvi.community_area_or_zip::TEXT = transportation.pickup_zip_code
-            WHERE ccvi.ccvi_category = 'HIGH'
-            GROUP BY ccvi.community_area_or_zip		
+            select ccvi_zip.community_area_or_zip, ccvi_zip.community_area_name, COUNT(transportation.id) As number_of_trips_to 
+			from (
+				select * 
+				from ccvi
+				join boundaries
+				on ccvi.community_area_or_zip::TEXT = boundaries.community_area
+			) ccvi_zip
+			join transportation
+			on ccvi_zip.zip_code = transportation.pickup_zip_code
+			WHERE ccvi_zip.ccvi_category = 'HIGH'
+			GROUP BY ccvi_zip.community_area_or_zip, ccvi_zip.community_area_name		
         ) as tb1
         JOIN (
-            SELECT ccvi.community_area_or_zip, COUNT(transportation.id) As number_of_trips_from
-            FROM ccvi
-            JOIN transportation 
-            ON ccvi.community_area_or_zip::TEXT = transportation.dropoff_zip_code
-            WHERE ccvi.ccvi_category = 'HIGH'
-            GROUP BY ccvi.community_area_or_zip
+            select ccvi_zip.community_area_or_zip, ccvi_zip.community_area_name, COUNT(transportation.id) As number_of_trips_from 
+			from (
+				select * 
+				from ccvi
+				join boundaries
+				on ccvi.community_area_or_zip::TEXT = boundaries.community_area
+			) ccvi_zip
+			join transportation
+			on ccvi_zip.zip_code = transportation.dropoff_zip_code
+			WHERE ccvi_zip.ccvi_category = 'HIGH'
+			GROUP BY ccvi_zip.community_area_or_zip, ccvi_zip.community_area_name		
         ) as tb2
         ON tb1.community_area_or_zip= tb2.community_area_or_zip;
 	`
