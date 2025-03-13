@@ -785,7 +785,7 @@ func GetCCVIDetails(db *sql.DB) {
 	}
 
 	create_table := `CREATE TABLE IF NOT EXISTS "ccvi" (
-		"ID" SERIAL
+		"ID" SERIAL,
 		"community_area_or_zip" INTEGER,
 		"geography_type" VARCHAR(255),
 		"community_area_name" VARCHAR(255),
