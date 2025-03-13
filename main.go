@@ -263,11 +263,11 @@ func GetBoundaries(db *sql.DB) {
 	s := fmt.Sprintf("\n\n Boundaries number of SODA records received = %d\n\n", len(boundaries))
 	io.WriteString(os.Stdout, s)
 
-	sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
+	for i := 0; i < len(boundaries); i++ { {
+        community_area := boundaries[i].CommunityArea
+        zip_code := boundaries[i].ZipCode
 
-	for _, boundary := range boundaries {
-        community_area := boundary.CommunityArea
-        zip_code := boundary.ZipCode
+		sql := `INSERT INTO boundaries ("community_area", "zip_code") values($1, $2)`
 
 		_, err = db.Exec(
 			sql,
@@ -436,7 +436,7 @@ func GetTrips(db *sql.DB) {
 		}
 
 		// Comment the following line while not unit-testing
-		fmt.Println(pickup_location)
+		// fmt.Println(pickup_location)
 
 		pickup_address_list, _ := geocoder.GeocodingReverse(pickup_location)
 		pickup_address := pickup_address_list[0]
